@@ -981,17 +981,13 @@ async function loadFromSheets(){
     if(!json.ok)throw new Error(json.error);
     const d=json.data;
     if(d.posts&&d.posts.length){
-      // Merge: combine sheets + local, deduplicate by date+text prefix
-      const allPosts=[...d.posts,...DB.posts];
-      const seen=new Set();
-      const merged=[];
-      allPosts.forEach(p=>{
-        const key=p.date+'|'+p.text.substring(0,30);
-        if(!seen.has(key)){seen.add(key);merged.push(p);}
+      // Keep hardcoded posts as base, only restore AI insights from Sheets
+      const aiMap={};
+      d.posts.forEach(p=>{if(p.ai&&p.ai.length)aiMap[p.date+'|'+p.text.substring(0,20)]=p.ai;});
+      DB.posts.forEach(p=>{
+        const key=p.date+'|'+p.text.substring(0,20);
+        if(aiMap[key])p.ai=aiMap[key];
       });
-      merged.sort((a,b)=>b.date.localeCompare(a.date));
-      DB.posts=merged;
-      if(merged.length>d.posts.length){setTimeout(()=>saveToSheets(),2000);}
     }
     if(d.dailyFollowers&&d.dailyFollowers.length)DB.dailyFollowers=d.dailyFollowers;
     if(d.settings&&d.settings.analysis)DB.analysis=d.settings.analysis;
